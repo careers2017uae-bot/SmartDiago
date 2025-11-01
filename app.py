@@ -346,5 +346,5 @@ else:
 
 # Footer: small API info / disclaimers
 st.markdown("---")
-st.markdown("**Notes:** This demo uses xAI / Grok API for AI-generated text. Configure `XAI_API_KEY` as an environment variable before running. See x.ai docs for models and pricing. :contentReference[oaicite:3]{index=3}")
+#st.markdown("**Notes:** This demo uses xAI / Grok API for AI-generated text. Configure `XAI_API_KEY` as an environment variable before running. See x.ai docs for models and pricing. :contentReference[oaicite:3]{index=3}")
 st.markdown("**Disclaimer:** This software is only for demonstration. Do not rely on it for medical decision-making; always consult a licensed clinician.")
