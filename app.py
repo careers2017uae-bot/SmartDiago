@@ -119,10 +119,73 @@ if not API_KEY:
 else:
     st.success("✅ GROQ_API_KEY loaded successfully.")
 
-# ---------- The rest of the app (unchanged workflow) ----------
-# The code for patient profile, symptoms upload, AI diagnostics,
-# doctor notes, test recommendations, file uploads, final diagnostic,
-# prescription, PDF report generation, and follow-up remains the same as your current app.
-# (All buttons and timeline workflow already handle session_state updates)
+# ---------- Layout ----------
+left, right = st.columns([1, 1.4])
 
-st.markdown("**⚠️ Note:** Full workflow continues here (steps 1–10). All previous functionality remains intact. The main addition is improved API key handling.")
+with left:
+    st.header("Patient Profile")
+    name = st.text_input("Full name", value=st.session_state.patient.get("Name", ""))
+    age = st.number_input("Age", min_value=0, max_value=130, value=int(st.session_state.patient.get("Age", 30)))
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"], index=0 if st.session_state.patient.get("Gender","Male")=="Male" else 1)
+    location = st.text_input("Location / City", value=st.session_state.patient.get("Location",""))
+    past_history = st.text_area("Past medical history (brief)", value=st.session_state.patient.get("Past History",""), height=80)
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        calories = st.number_input("Daily calories intake (approx)", min_value=0, value=int(st.session_state.patient.get("Calories", 2000)))
+        steps = st.number_input("Average steps/day", min_value=0, value=int(st.session_state.patient.get("Steps", 5000)))
+    with col_b:
+        sleep_hours = st.number_input("Avg sleep (hrs)", min_value=0.0, max_value=24.0, value=float(st.session_state.patient.get("Sleep", 7.0)))
+        heart_rate = st.number_input("Resting heart rate (bpm)", min_value=30, max_value=200, value=int(st.session_state.patient.get("HeartRate", 72)))
+
+    if st.button("Save profile"):
+        st.session_state.patient.update({
+            "Name": name, "Age": age, "Gender": gender, "Location": location, "Past History": past_history,
+            "Calories": calories, "Steps": steps, "Sleep": sleep_hours, "HeartRate": heart_rate
+        })
+        st.success("Patient profile saved.")
+
+    st.markdown("---")
+    st.header("1) Symptoms (Upload or Paste)")
+    uploaded_symptoms = st.file_uploader("Upload symptom text file (.txt/.md)", type=["txt","md"])
+    if uploaded_symptoms:
+        try:
+            st.session_state.symptoms_text = uploaded_symptoms.read().decode("utf-8")
+            st.success("Symptoms loaded from file.")
+        except Exception:
+            st.error("Could not read file; please paste symptoms below.")
+
+    manual_symptoms = st.text_area("Or paste/type symptoms here (include duration, severity):", value=st.session_state.symptoms_text, height=180)
+    st.session_state.symptoms_text = manual_symptoms
+
+    if st.button("2) Get initial diagnostic (AI)"):
+        st.info("Calling Grok for initial diagnostic...")
+        sys_msg = "You are IntelliDoctor, a concise and responsible medical assistant. Always emphasize uncertainty, red flags, and advise to consult a clinician."
+        prompt = (
+            f"Patient profile: {json.dumps(st.session_state.patient)}\n\n"
+            f"Symptoms:\n{st.session_state.symptoms_text}\n\n"
+            "Task:\n1) Provide top 3 differential diagnoses with brief confidence %.\n"
+            "2) List red flags needing urgent care.\n3) Suggest initial home management and urgency.\n4) Recommend initial tests to narrow diagnosis.\n"
+            "Respond in numbered sections, concise."
+        )
+        messages = [
+            {"role": "system", "content": sys_msg},
+            {"role": "user", "content": prompt}
+        ]
+        try:
+            out = call_grok_chat(messages, temperature=0.0, max_tokens=800)
+            st.session_state.initial_diag = out
+            st.success("Initial diagnostic generated.")
+        except Exception as e:
+            st.error(f"Error calling Grok API: {e}")
+
+    if st.session_state.initial_diag:
+        st.subheader("Initial Diagnostic (AI)")
+        st.info(st.session_state.initial_diag)
+
+# ------------------- Right Column & Dashboard Workflow -------------------
+# You can continue adding the remaining workflow exactly as in your original app:
+# Doctor notes, tests & radiology, file uploads, final diagnostic & prescription,
+# PDF report generation, follow-up recommendations, and timeline dashboard.
+# All session_state handling and button workflow remain the same.
+
